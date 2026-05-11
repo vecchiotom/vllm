@@ -1098,8 +1098,11 @@ def _maybe_pad_fp8_weight(weight: torch.Tensor) -> torch.Tensor:
     ):
         num_pad = 256 // weight.element_size()
         import torch.nn.functional as F
-
-        weight = F.pad(weight, (0, num_pad), "constant", 0)[..., :-num_pad]
+        try:
+            weight = F.pad(weight, (0, num_pad), "constant", 0)[..., :-num_pad]
+        except torch.OutOfMemoryError:
+            device = weight.device
+            weight = F.pad(weight.cpu(), (0, num_pad), "constant", 0)[..., :-num_pad].to(device)
         torch.accelerator.empty_cache()
     return weight
 
