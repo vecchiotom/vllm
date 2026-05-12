@@ -1102,8 +1102,11 @@ def _maybe_pad_fp8_weight(weight: torch.Tensor) -> torch.Tensor:
             weight = F.pad(weight, (0, num_pad), "constant", 0)[..., :-num_pad]
         except torch.OutOfMemoryError:
             device = weight.device
-            weight = F.pad(weight.cpu(), (0, num_pad), "constant", 0)[..., :-num_pad].to(device)
-        torch.accelerator.empty_cache()
+            cpu_weight = F.pad(weight.cpu(), (0, num_pad), "constant", 0)[..., :-num_pad]
+            del weight
+            torch.accelerator.empty_cache()
+            weight = cpu_weight.to(device)
+            del cpu_weight
     return weight
 
 
